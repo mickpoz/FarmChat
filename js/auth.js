@@ -237,6 +237,30 @@ async function signOut() {
     }
 }
 
+// Function to display user list
+function setupUserList() {
+    firebase.firestore().collection('users')
+        .onSnapshot((snapshot) => {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+            
+            snapshot.docs.forEach((doc) => {
+                const userData = doc.data();
+                const userElement = document.createElement('div');
+                userElement.className = 'user-list-item';
+                userElement.innerHTML = `
+                    <img src="${userData.avatarUrl || ''}" class="avatar" alt="Avatar">
+                    <div class="user-info">
+                        <div class="username">${userData.username}</div>
+                        <div class="status">${userData.status}</div>
+                        ${userData.spotifyUrl ? `<a href="${userData.spotifyUrl}" class="spotify-link" target="_blank">Spotify Song</a>` : ''}
+                    </div>
+                `;
+                usersList.appendChild(userElement);
+            });
+        });
+}
+
 // Update the auth state changed handler
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
@@ -244,6 +268,7 @@ firebase.auth().onAuthStateChanged((user) => {
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('chatContainer').style.display = 'grid';
         loadUserProfile(user.uid);
+        setupUserList();
     } else {
         // User is signed out
         document.getElementById('authContainer').style.display = 'block';

@@ -30,16 +30,12 @@ function displayMessage(message) {
     
     messageElement.innerHTML = `
         <div class="message-header">
-            <img src="${message.avatarUrl || 'default-avatar.png'}" class="avatar" alt="Avatar">
-            <span class="username" data-user-id="${message.userId}">${message.username}</span>
+            <img src="${message.avatarUrl || ''}" class="avatar" alt="Avatar">
+            <strong>${message.username}</strong>
             <span class="timestamp">${timestamp}</span>
         </div>
         <div class="message-content">${message.text}</div>
     `;
-    
-    // Add click handler for username
-    const usernameElement = messageElement.querySelector('.username');
-    usernameElement.onclick = () => showUserProfile(message.userId);
 
     messagesContainer.appendChild(messageElement);
 }
@@ -100,16 +96,12 @@ function displayMessageOfTheDay() {
         <div class="message motd">
             <div class="message-header">
                 <img src="${messageOfTheDay.avatarUrl || ''}" class="avatar">
-                <span class="username" data-user-id="${messageOfTheDay.userId}">${messageOfTheDay.username}</span>
+                <strong>${messageOfTheDay.username}</strong>
                 <span class="timestamp">Message of the Day</span>
             </div>
             <div class="message-content">${messageOfTheDay.message}</div>
         </div>
     `;
-
-    // Add click handler for username
-    const usernameElement = motdContainer.querySelector('.username');
-    usernameElement.onclick = () => showUserProfile(messageOfTheDay.userId);
 }
 
 // Send a message
