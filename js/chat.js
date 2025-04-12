@@ -1,6 +1,6 @@
 // Load messages
 function loadMessages() {
-    db.collection('messages')
+    firebase.firestore().collection('messages')
         .orderBy('timestamp', 'desc')
         .limit(50)
         .onSnapshot((snapshot) => {
@@ -61,8 +61,8 @@ async function sendMessage() {
     const messageInput = document.getElementById('messageInput');
     const text = messageInput.value.trim();
     
-    if (text && auth.currentUser) {
-        const userId = auth.currentUser.uid;
+    if (text && firebase.auth().currentUser) {
+        const userId = firebase.auth().currentUser.uid;
         
         // Check rate limit
         if (!messageLimiter.canSendMessage(userId)) {
@@ -71,11 +71,11 @@ async function sendMessage() {
             return;
         }
         
-        const userDoc = await db.collection('users').doc(userId).get();
+        const userDoc = await firebase.firestore().collection('users').doc(userId).get();
         const userData = userDoc.data();
         
         try {
-            await db.collection('messages').add({
+            await firebase.firestore().collection('messages').add({
                 userId: userId,
                 username: userData.username,
                 avatarUrl: userData.avatarUrl,
@@ -109,7 +109,7 @@ document.getElementById('messageInput').addEventListener('keypress', (e) => {
 });
 
 // Initialize chat when user is authenticated
-auth.onAuthStateChanged((user) => {
+firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         loadMessages();
     }

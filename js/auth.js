@@ -15,7 +15,7 @@ async function login() {
     const password = document.getElementById('password').value;
 
     try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
         showChat();
         loadUserProfile(userCredential.user.uid);
     } catch (error) {
@@ -31,7 +31,7 @@ async function register() {
 
     try {
         // Create user account
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
         const userId = userCredential.user.uid;
 
         // Upload avatar if provided
@@ -43,7 +43,7 @@ async function register() {
         }
 
         // Create user profile in Firestore
-        await db.collection('users').doc(userId).set({
+        await firebase.firestore().collection('users').doc(userId).set({
             username: username,
             email: email,
             avatarUrl: avatarUrl,
@@ -66,7 +66,7 @@ function showChat() {
 }
 
 function loadUserProfile(userId) {
-    db.collection('users').doc(userId).onSnapshot((doc) => {
+    firebase.firestore().collection('users').doc(userId).onSnapshot((doc) => {
         if (doc.exists) {
             const userData = doc.data();
             document.getElementById('userName').textContent = userData.username;
@@ -81,11 +81,11 @@ function loadUserProfile(userId) {
 
 // Update user profile
 async function updateStatus() {
-    const userId = auth.currentUser.uid;
+    const userId = firebase.auth().currentUser.uid;
     const newStatus = document.getElementById('statusInput').value;
     
     if (newStatus.trim()) {
-        await db.collection('users').doc(userId).update({
+        await firebase.firestore().collection('users').doc(userId).update({
             status: newStatus
         });
         document.getElementById('statusInput').value = '';
@@ -93,11 +93,11 @@ async function updateStatus() {
 }
 
 async function updateSpotify() {
-    const userId = auth.currentUser.uid;
+    const userId = firebase.auth().currentUser.uid;
     const newSpotifyUrl = document.getElementById('spotifyInput').value;
     
     if (newSpotifyUrl.trim()) {
-        await db.collection('users').doc(userId).update({
+        await firebase.firestore().collection('users').doc(userId).update({
             spotifyUrl: newSpotifyUrl
         });
         document.getElementById('spotifyInput').value = '';
@@ -105,7 +105,7 @@ async function updateSpotify() {
 }
 
 // Check auth state
-auth.onAuthStateChanged((user) => {
+firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         showChat();
         loadUserProfile(user.uid);
