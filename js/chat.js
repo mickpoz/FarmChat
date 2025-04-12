@@ -20,6 +20,19 @@ function loadMessages() {
         });
 }
 
+// Function to scroll to the bottom of the messages container
+function scrollToBottom() {
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Function to check if user is near the bottom of the chat
+function isNearBottom() {
+    const messagesContainer = document.getElementById('messages');
+    const threshold = 100; // pixels from bottom
+    return messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < threshold;
+}
+
 // Display a message
 function displayMessage(message) {
     const messagesContainer = document.getElementById('messages');
@@ -38,6 +51,11 @@ function displayMessage(message) {
     `;
 
     messagesContainer.appendChild(messageElement);
+    
+    // Auto-scroll if user is near the bottom
+    if (isNearBottom()) {
+        scrollToBottom();
+    }
 }
 
 // Show rate limit message
@@ -215,4 +233,30 @@ async function setMessageOfTheDay(message) {
     } catch (error) {
         console.error('Error setting message of the day:', error);
     }
-} 
+}
+
+// Add scroll event listener to messages container
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.getElementById('messages');
+    let autoScroll = true;
+
+    messagesContainer.addEventListener('scroll', function() {
+        // If user manually scrolls up, disable auto-scroll
+        if (!isNearBottom()) {
+            autoScroll = false;
+        }
+        // If user scrolls to bottom, re-enable auto-scroll
+        else {
+            autoScroll = true;
+        }
+    });
+
+    // Scroll to bottom when new messages arrive
+    const observer = new MutationObserver(function() {
+        if (autoScroll) {
+            scrollToBottom();
+        }
+    });
+
+    observer.observe(messagesContainer, { childList: true, subtree: true });
+}); 
