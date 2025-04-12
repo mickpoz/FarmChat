@@ -66,29 +66,63 @@ function showRateLimitMessage(timeLeft) {
 // Message of the Day
 let messageOfTheDay = null;
 
-// Function to set Message of the Day
-async function setMessageOfTheDay(message) {
-    try {
-        await firebase.firestore().collection('settings').doc('messageOfTheDay').set({
-            message: message,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            userId: firebase.auth().currentUser.uid
-        });
-    } catch (error) {
-        console.error('Error setting message of the day:', error);
-    }
-}
-
 // Function to get Message of the Day
 async function getMessageOfTheDay() {
     try {
         const doc = await firebase.firestore().collection('settings').doc('messageOfTheDay').get();
         if (doc.exists) {
-            messageOfTheDay = doc.data();
-            displayMessageOfTheDay();
+            const motdData = doc.data();
+            // Fetch user data for the MOTD
+            const userDoc = await firebase.firestore().collection('users').doc(motdData.userId).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                messageOfTheDay = {
+                    ...motdData,
+                    username: userData.username,
+                    avatarUrl: userData.avatarUrl
+                };
+                displayMessageOfTheDay();
+            }
         }
     } catch (error) {
         console.error('Error getting message of the day:', error);
+    }
+}
+
+// Function to set Message of the Day
+async function setMessageOfTheDay(message) {
+    try {
+        const user = firebase.auth().currentUser;
+        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+
+        await firebase.firestore().collection('settings').doc('messageOfTheDay').set({
+            message: message,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            userId: user.uid,
+            username: userData.username,
+            avatarUrl: userData.avatarUrl
+        });
+
+        // Add a notification message to the chat
+        const messagesContainer = document.getElementById('messages');
+        const notification = document.createElement('div');
+        notification.className = 'message notification';
+        notification.innerHTML = `
+            <div class="message-content">
+                ${userData.username} has set a new Message of the Day: "${message}"
+            </div>
+        `;
+        messagesContainer.appendChild(notification);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Remove the notification after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+
+    } catch (error) {
+        console.error('Error setting message of the day:', error);
     }
 }
 
