@@ -34,12 +34,20 @@ async function register() {
         const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
         const userId = userCredential.user.uid;
 
-        // Upload avatar if provided
+        // Handle avatar if provided
         let avatarUrl = '';
         if (avatarFile) {
-            const storageRef = firebase.storage().ref(`avatars/${userId}`);
-            await storageRef.put(avatarFile);
-            avatarUrl = await storageRef.getDownloadURL();
+            if (!avatarFile.type.startsWith('image/')) {
+                throw new Error('Please select an image file');
+            }
+            if (avatarFile.size > 1024 * 1024) {
+                throw new Error('Image size should be less than 1MB');
+            }
+            avatarUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(avatarFile);
+            });
         }
 
         // Create user profile in Firestore
@@ -82,19 +90,34 @@ async function updateAvatar() {
     }
 
     try {
-        const userId = firebase.auth().currentUser.uid;
-        const storageRef = firebase.storage().ref(`avatars/${userId}`);
-        await storageRef.put(newAvatarFile);
-        const avatarUrl = await storageRef.getDownloadURL();
+        // Check if file is an image
+        if (!newAvatarFile.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
 
-        // Update user profile in Firestore
-        await firebase.firestore().collection('users').doc(userId).update({
-            avatarUrl: avatarUrl
-        });
+        // Check file size (limit to 1MB)
+        if (newAvatarFile.size > 1024 * 1024) {
+            alert('Image size should be less than 1MB');
+            return;
+        }
 
-        // Update the avatar image in the UI
-        document.getElementById('userAvatar').src = avatarUrl;
-        hideAvatarEdit();
+        // Convert image to base64
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64Image = e.target.result;
+            const userId = firebase.auth().currentUser.uid;
+
+            // Update user profile in Firestore with base64 image
+            await firebase.firestore().collection('users').doc(userId).update({
+                avatarUrl: base64Image
+            });
+
+            // Update the avatar image in the UI
+            document.getElementById('userAvatar').src = base64Image;
+            hideAvatarEdit();
+        };
+        reader.readAsDataURL(newAvatarFile);
     } catch (error) {
         alert('Failed to update avatar: ' + error.message);
     }
