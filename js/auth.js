@@ -51,19 +51,29 @@ async function register() {
         }
 
         // Create user profile in Firestore
-        await firebase.firestore().collection('users').doc(userId).set({
+        const userProfile = {
             username: username,
             email: email,
             avatarUrl: avatarUrl,
             status: 'Just joined Farm Chat!',
             spotifyUrl: '',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        };
 
-        showChat();
+        // Wait for the profile to be created
+        await firebase.firestore().collection('users').doc(userId).set(userProfile);
+
+        // Only show chat and load profile after Firestore document is created
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('chatContainer').style.display = 'grid';
         loadUserProfile(userId);
     } catch (error) {
+        console.error('Registration error:', error);
         alert('Registration failed: ' + error.message);
+        // If there's an error, sign out the user since we can't create their profile
+        if (firebase.auth().currentUser) {
+            await firebase.auth().signOut();
+        }
     }
 }
 

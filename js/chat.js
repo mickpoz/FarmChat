@@ -132,8 +132,19 @@ async function sendMessage() {
     if (message) {
         try {
             const user = firebase.auth().currentUser;
+            if (!user) {
+                throw new Error('You must be logged in to send messages');
+            }
+
             const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+            if (!userDoc.exists) {
+                throw new Error('User profile not found. Please try logging out and back in.');
+            }
+
             const userData = userDoc.data();
+            if (!userData.username) {
+                throw new Error('Username not found in profile. Please try logging out and back in.');
+            }
 
             await firebase.firestore().collection('messages').add({
                 text: message,
@@ -147,6 +158,17 @@ async function sendMessage() {
             rateLimiter.recordMessage();
         } catch (error) {
             console.error('Error sending message:', error);
+            // Show error message to user
+            const messagesContainer = document.getElementById('messages');
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'message error';
+            errorMessage.innerHTML = `
+                <div class="message-content">
+                    Error: ${error.message}
+                </div>
+            `;
+            messagesContainer.appendChild(errorMessage);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
 }
