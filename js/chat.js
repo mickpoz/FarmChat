@@ -1,3 +1,6 @@
+// Initialize rate limiter
+const rateLimiter = new RateLimiter(10, 60000); // 10 messages per 60 seconds
+
 // Load messages
 function loadMessages() {
     firebase.firestore().collection('messages')
