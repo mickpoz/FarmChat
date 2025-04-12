@@ -206,14 +206,39 @@ async function updateSpotify() {
     }
 }
 
-// Check auth state
+// Sign out function
+async function signOut() {
+    try {
+        await firebase.auth().signOut();
+        // Hide chat and show auth container
+        document.getElementById('chatContainer').style.display = 'none';
+        document.getElementById('authContainer').style.display = 'block';
+        // Clear any existing messages
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('motdContainer').innerHTML = '';
+        // Reset forms
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+    } catch (error) {
+        console.error('Error signing out:', error);
+        alert('Error signing out: ' + error.message);
+    }
+}
+
+// Update the auth state changed handler
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
-        showChat();
+        // User is signed in
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('chatContainer').style.display = 'grid';
         loadUserProfile(user.uid);
     } else {
+        // User is signed out
         document.getElementById('authContainer').style.display = 'block';
         document.getElementById('chatContainer').style.display = 'none';
-        showLogin();
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
     }
 }); 
