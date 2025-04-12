@@ -7,6 +7,9 @@ const db = firebase.firestore();
 // Initialize Auth
 const auth = firebase.auth();
 
+// Initialize Storage
+const storage = firebase.storage();
+
 // Security rules
 db.settings({
     cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
