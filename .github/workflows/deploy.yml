@@ -16,11 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
+      - name: Debug current directory
+        run: |
+          pwd
+          ls -la
+      
       - name: Create js directory if it doesn't exist
-        run: mkdir -p js
+        run: |
+          mkdir -p js
+          ls -la js
       
       - name: Create firebase-config.js
         run: |
+          echo "Creating firebase-config.js..."
           cat > js/firebase-config.js << 'EOL'
           const firebaseConfig = {
             apiKey: '${{ secrets.FIREBASE_API_KEY }}',
@@ -31,6 +39,10 @@ jobs:
             appId: '${{ secrets.FIREBASE_APP_ID }}'
           };
           EOL
+          
+          echo "Verifying file creation..."
+          ls -la js/
+          cat js/firebase-config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
