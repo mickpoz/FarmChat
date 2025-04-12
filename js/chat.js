@@ -28,12 +28,16 @@ function displayMessage(message) {
     messageElement.innerHTML = `
         <div class="message-header">
             <img src="${message.avatarUrl || 'default-avatar.png'}" class="avatar" alt="Avatar">
-            <strong>${message.username}</strong>
+            <span class="username" data-user-id="${message.userId}">${message.username}</span>
             <span class="timestamp">${timestamp}</span>
         </div>
         <div class="message-content">${message.text}</div>
     `;
     
+    // Add click handler for username
+    const usernameElement = messageElement.querySelector('.username');
+    usernameElement.onclick = () => showUserProfile(message.userId);
+
     messagesContainer.appendChild(messageElement);
 }
 
@@ -56,47 +60,97 @@ function showRateLimitMessage(timeLeft) {
     }, 3000);
 }
 
+// Message of the Day
+let messageOfTheDay = null;
+
+// Function to set Message of the Day
+async function setMessageOfTheDay(message) {
+    try {
+        await firebase.firestore().collection('settings').doc('messageOfTheDay').set({
+            message: message,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            userId: firebase.auth().currentUser.uid
+        });
+    } catch (error) {
+        console.error('Error setting message of the day:', error);
+    }
+}
+
+// Function to get Message of the Day
+async function getMessageOfTheDay() {
+    try {
+        const doc = await firebase.firestore().collection('settings').doc('messageOfTheDay').get();
+        if (doc.exists) {
+            messageOfTheDay = doc.data();
+            displayMessageOfTheDay();
+        }
+    } catch (error) {
+        console.error('Error getting message of the day:', error);
+    }
+}
+
+// Function to display Message of the Day
+function displayMessageOfTheDay() {
+    if (!messageOfTheDay) return;
+
+    const motdContainer = document.createElement('div');
+    motdContainer.className = 'message motd';
+    motdContainer.innerHTML = `
+        <div class="message-header">
+            <img src="${messageOfTheDay.avatarUrl || ''}" class="avatar">
+            <span class="username" data-user-id="${messageOfTheDay.userId}">${messageOfTheDay.username}</span>
+            <span class="timestamp">Message of the Day</span>
+        </div>
+        <div class="message-content">${messageOfTheDay.message}</div>
+    `;
+
+    const messagesContainer = document.getElementById('messages');
+    if (messagesContainer.firstChild) {
+        messagesContainer.insertBefore(motdContainer, messagesContainer.firstChild);
+    } else {
+        messagesContainer.appendChild(motdContainer);
+    }
+
+    // Add click handler for username
+    const usernameElement = motdContainer.querySelector('.username');
+    usernameElement.onclick = () => showUserProfile(messageOfTheDay.userId);
+}
+
 // Send a message
 async function sendMessage() {
+    if (!rateLimiter.canSendMessage()) {
+        showRateLimitMessage();
+        return;
+    }
+
     const messageInput = document.getElementById('messageInput');
-    const text = messageInput.value.trim();
+    const message = messageInput.value.trim();
     
-    if (text && firebase.auth().currentUser) {
-        const userId = firebase.auth().currentUser.uid;
-        
-        // Check rate limit
-        if (!messageLimiter.canSendMessage(userId)) {
-            const timeLeft = messageLimiter.getTimeUntilNextMessage(userId);
-            showRateLimitMessage(timeLeft);
-            return;
-        }
-        
-        const userDoc = await firebase.firestore().collection('users').doc(userId).get();
-        const userData = userDoc.data();
-        
+    if (message.startsWith('/motd ')) {
+        const motdMessage = message.substring(6);
+        await setMessageOfTheDay(motdMessage);
+        messageInput.value = '';
+        return;
+    }
+
+    if (message) {
         try {
+            const user = firebase.auth().currentUser;
+            const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+            const userData = userDoc.data();
+
             await firebase.firestore().collection('messages').add({
-                userId: userId,
+                text: message,
+                userId: user.uid,
                 username: userData.username,
                 avatarUrl: userData.avatarUrl,
-                text: text,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-            
+
             messageInput.value = '';
+            rateLimiter.recordMessage();
         } catch (error) {
             console.error('Error sending message:', error);
-            // Show error message to user
-            const messagesContainer = document.getElementById('messages');
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'message error';
-            errorMessage.innerHTML = `
-                <div class="message-content">
-                    Error sending message. Please try again.
-                </div>
-            `;
-            messagesContainer.appendChild(errorMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
 }
@@ -113,4 +167,7 @@ firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         loadMessages();
     }
-}); 
+});
+
+// Initialize Message of the Day
+getMessageOfTheDay(); 
