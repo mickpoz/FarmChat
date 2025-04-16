@@ -45,25 +45,44 @@ function displayMessage(message) {
     
     const timestamp = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : '';
     
-    // Check if the current user is DaddyPig
-    const isDaddyPig = firebase.auth().currentUser && 
-                      firebase.auth().currentUser.displayName === 'DaddyPig';
-    
+    // Check if the current user is DaddyPig by checking the username
+    const isDaddyPig = async () => {
+        const user = firebase.auth().currentUser;
+        if (!user) return false;
+        
+        try {
+            const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+            return userDoc.exists && userDoc.data().username === 'DaddyPig';
+        } catch (error) {
+            console.error('Error checking user:', error);
+            return false;
+        }
+    };
+
+    // Create the message element with a placeholder for the delete button
     messageElement.innerHTML = `
         <div class="message-header">
             <img src="${message.avatarUrl || ''}" class="avatar" alt="Avatar">
             <strong>${message.username}</strong>
             <span class="timestamp">${timestamp}</span>
-            ${isDaddyPig ? `<button class="delete-message-btn" onclick="deleteMessage('${message.id}')">
-                <i class="fas fa-trash"></i>
-            </button>` : ''}
+            <div class="delete-button-placeholder"></div>
         </div>
         <div class="message-content" style="colour: ${message.textColour || '#000000'}">${message.text}</div>
     `;
 
+    // Check if user is DaddyPig and add delete button if true
+    isDaddyPig().then(isDaddy => {
+        if (isDaddy) {
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-message-btn';
+            deleteButton.onclick = () => deleteMessage(message.id);
+            deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+            messageElement.querySelector('.delete-button-placeholder').replaceWith(deleteButton);
+        }
+    });
+
     messagesContainer.appendChild(messageElement);
     
-    // Auto-scroll if user is near the bottom
     if (isNearBottom()) {
         scrollToBottom();
     }
@@ -315,12 +334,19 @@ function displaySystemMessage(message) {
 
 // Delete a message
 async function deleteMessage(messageId) {
-    if (!firebase.auth().currentUser || firebase.auth().currentUser.displayName !== 'DaddyPig') {
-        displaySystemMessage('Only DaddyPig can delete messages');
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        displaySystemMessage('You must be logged in to delete messages');
         return;
     }
 
     try {
+        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().username !== 'DaddyPig') {
+            displaySystemMessage('Only DaddyPig can delete messages');
+            return;
+        }
+
         await firebase.firestore().collection('messages').doc(messageId).delete();
         const messageElement = document.getElementById(`message-${messageId}`);
         if (messageElement) {
