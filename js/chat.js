@@ -11,7 +11,10 @@ function loadMessages() {
             messagesContainer.innerHTML = '';
             
             snapshot.docs.reverse().forEach((doc) => {
-                const message = doc.data();
+                const message = {
+                    id: doc.id,
+                    ...doc.data()
+                };
                 displayMessage(message);
             });
             
@@ -38,14 +41,22 @@ function displayMessage(message) {
     const messagesContainer = document.getElementById('messages');
     const messageElement = document.createElement('div');
     messageElement.className = 'message';
+    messageElement.id = `message-${message.id}`;
     
     const timestamp = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : '';
+    
+    // Check if the current user is DaddyPig
+    const isDaddyPig = firebase.auth().currentUser && 
+                      firebase.auth().currentUser.displayName === 'DaddyPig';
     
     messageElement.innerHTML = `
         <div class="message-header">
             <img src="${message.avatarUrl || ''}" class="avatar" alt="Avatar">
             <strong>${message.username}</strong>
             <span class="timestamp">${timestamp}</span>
+            ${isDaddyPig ? `<button class="delete-message-btn" onclick="deleteMessage('${message.id}')">
+                <i class="fas fa-trash"></i>
+            </button>` : ''}
         </div>
         <div class="message-content" style="colour: ${message.textColour || '#000000'}">${message.text}</div>
     `;
@@ -187,7 +198,7 @@ async function sendMessage() {
             const userData = userDoc.data();
             const textColour = userData.textColour || '#000000';
 
-            await firebase.firestore().collection('messages').add({
+            const messageRef = await firebase.firestore().collection('messages').add({
                 text: message,
                 userId: user.uid,
                 username: userData.username,
@@ -299,5 +310,24 @@ function displaySystemMessage(message) {
     
     if (isNearBottom()) {
         scrollToBottom();
+    }
+}
+
+// Delete a message
+async function deleteMessage(messageId) {
+    if (!firebase.auth().currentUser || firebase.auth().currentUser.displayName !== 'DaddyPig') {
+        displaySystemMessage('Only DaddyPig can delete messages');
+        return;
+    }
+
+    try {
+        await firebase.firestore().collection('messages').doc(messageId).delete();
+        const messageElement = document.getElementById(`message-${messageId}`);
+        if (messageElement) {
+            messageElement.remove();
+        }
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        displaySystemMessage('Error deleting message: ' + error.message);
     }
 } 
