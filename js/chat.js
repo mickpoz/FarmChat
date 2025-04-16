@@ -206,6 +206,41 @@ async function sendMessage() {
         return;
     }
 
+    if (message.startsWith('/motd ')) {
+        const motdMessage = message.substring(6).trim();
+        if (motdMessage) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    displaySystemMessage('You must be logged in to set the Message of the Day');
+                    return;
+                }
+
+                const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+                if (!userDoc.exists) {
+                    displaySystemMessage('User profile not found');
+                    return;
+                }
+
+                const userData = userDoc.data();
+                await firebase.firestore().collection('settings').doc('messageOfTheDay').set({
+                    message: motdMessage,
+                    userId: user.uid,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                displaySystemMessage('Message of the Day has been updated');
+            } catch (error) {
+                console.error('Error setting Message of the Day:', error);
+                displaySystemMessage('Error setting Message of the Day: ' + error.message);
+            }
+        } else {
+            displaySystemMessage('Please provide a message for the Message of the Day');
+        }
+        messageInput.value = '';
+        return;
+    }
+
     if (message) {
         try {
             const user = firebase.auth().currentUser;
