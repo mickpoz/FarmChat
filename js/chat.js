@@ -47,7 +47,7 @@ function displayMessage(message) {
             <strong>${message.username}</strong>
             <span class="timestamp">${timestamp}</span>
         </div>
-        <div class="message-content" style="color: ${message.textColor || '#000000'}">${message.text}</div>
+        <div class="message-content" style="colour: ${message.textColour || '#000000'}">${message.text}</div>
     `;
 
     messagesContainer.appendChild(messageElement);
@@ -127,28 +127,28 @@ async function sendMessage() {
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
 
-    if (message.startsWith('/color ')) {
+    if (message.startsWith('/colour ')) {
         const parts = message.split(' ');
         if (parts.length >= 2) {
-            const color = parts[1].trim();
+            const colour = parts[1].trim();
             const remainingMessage = parts.slice(2).join(' ');
             
-            // Validate color format (hex, rgb, or color name)
-            if (isValidColor(color)) {
+            // Validate colour format (hex, rgb, or colour name)
+            if (isValidColour(colour)) {
                 const user = firebase.auth().currentUser;
                 if (!user) {
-                    displaySystemMessage('You must be logged in to change text color');
+                    displaySystemMessage('You must be logged in to change text colour');
                     return;
                 }
 
                 try {
                     await firebase.firestore().collection('users').doc(user.uid).update({
-                        textColor: color
+                        textColour: colour
                     });
                     
-                    displaySystemMessage(`Text color changed to ${color}`);
+                    displaySystemMessage(`Text colour changed to ${colour}`);
                     
-                    // If there's a message after the color command, send it with the new color
+                    // If there's a message after the colour command, send it with the new colour
                     if (remainingMessage) {
                         const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
                         const userData = userDoc.data();
@@ -158,19 +158,19 @@ async function sendMessage() {
                             userId: user.uid,
                             username: userData.username,
                             avatarUrl: userData.avatarUrl,
-                            textColor: color,
+                            textColour: colour,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }
                 } catch (error) {
-                    console.error('Error updating text color:', error);
-                    displaySystemMessage('Error changing text color: ' + error.message);
+                    console.error('Error updating text colour:', error);
+                    displaySystemMessage('Error changing text colour: ' + error.message);
                 }
             } else {
-                displaySystemMessage('Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or a valid color name.');
+                displaySystemMessage('Invalid colour format. Use hex (#RRGGBB), rgb(r,g,b), or a valid colour name.');
             }
         } else {
-            displaySystemMessage('Please specify a color. Example: /color red');
+            displaySystemMessage('Please specify a colour. Example: /colour red');
         }
         messageInput.value = '';
         return;
@@ -185,14 +185,14 @@ async function sendMessage() {
             if (!userDoc.exists) throw new Error('User profile not found');
 
             const userData = userDoc.data();
-            const textColor = userData.textColor || '#000000';
+            const textColour = userData.textColour || '#000000';
 
             await firebase.firestore().collection('messages').add({
                 text: message,
                 userId: user.uid,
                 username: userData.username,
                 avatarUrl: userData.avatarUrl,
-                textColor: textColor,
+                textColour: textColour,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -282,11 +282,11 @@ document.addEventListener('DOMContentLoaded', function() {
     observer.observe(messagesContainer, { childList: true, subtree: true });
 });
 
-// Helper function to validate color
-function isValidColor(color) {
+// Helper function to validate colour
+function isValidColour(colour) {
     const s = new Option().style;
-    s.color = color;
-    return s.color !== '';
+    s.colour = colour;
+    return s.colour !== '';
 }
 
 // Display system message

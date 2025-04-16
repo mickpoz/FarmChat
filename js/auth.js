@@ -47,7 +47,7 @@ async function register() {
             avatarUrl: avatarUrl,
             status: 'Just joined Farm Chat!',
             spotifyUrl: '',
-            textColor: '#000000',
+            textColour: '#000000',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
@@ -263,7 +263,7 @@ async function updateTextColor(color) {
     const userId = firebase.auth().currentUser.uid;
     try {
         await firebase.firestore().collection('users').doc(userId).update({
-            textColor: color
+            textColour: color
         });
     } catch (error) {
         console.error('Error updating text color:', error);
