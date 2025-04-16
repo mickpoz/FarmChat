@@ -124,51 +124,67 @@ function displayMessageOfTheDay() {
 
 // Send a message
 async function sendMessage() {
-    if (!rateLimiter.canSendMessage()) {
-        showRateLimitMessage();
-        return;
-    }
-
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
-    
-    if (message.startsWith('/motd ')) {
-        const motdMessage = message.substring(6);
-        await setMessageOfTheDay(motdMessage);
-        messageInput.value = '';
-        return;
-    }
 
     if (message.startsWith('/color ')) {
-        const color = message.substring(7).trim();
-        // Validate color format (hex, rgb, or color name)
-        if (isValidColor(color)) {
-            await updateTextColor(color);
-            messageInput.value = '';
-            return;
+        const parts = message.split(' ');
+        if (parts.length >= 2) {
+            const color = parts[1].trim();
+            const remainingMessage = parts.slice(2).join(' ');
+            
+            // Validate color format (hex, rgb, or color name)
+            if (isValidColor(color)) {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    displaySystemMessage('You must be logged in to change text color');
+                    return;
+                }
+
+                try {
+                    await firebase.firestore().collection('users').doc(user.uid).update({
+                        textColor: color
+                    });
+                    
+                    displaySystemMessage(`Text color changed to ${color}`);
+                    
+                    // If there's a message after the color command, send it with the new color
+                    if (remainingMessage) {
+                        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+                        const userData = userDoc.data();
+                        
+                        await firebase.firestore().collection('messages').add({
+                            text: remainingMessage,
+                            userId: user.uid,
+                            username: userData.username,
+                            avatarUrl: userData.avatarUrl,
+                            textColor: color,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating text color:', error);
+                    displaySystemMessage('Error changing text color: ' + error.message);
+                }
+            } else {
+                displaySystemMessage('Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or a valid color name.');
+            }
         } else {
-            displaySystemMessage('Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or a valid color name.');
-            return;
+            displaySystemMessage('Please specify a color. Example: /color red');
         }
+        messageInput.value = '';
+        return;
     }
 
     if (message) {
         try {
             const user = firebase.auth().currentUser;
-            if (!user) {
-                throw new Error('You must be logged in to send messages');
-            }
+            if (!user) throw new Error('You must be logged in to send messages');
 
             const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
-            if (!userDoc.exists) {
-                throw new Error('User profile not found. Please try logging out and back in.');
-            }
+            if (!userDoc.exists) throw new Error('User profile not found');
 
             const userData = userDoc.data();
-            if (!userData.username) {
-                throw new Error('Username not found in profile. Please try logging out and back in.');
-            }
-
             const textColor = userData.textColor || '#000000';
 
             await firebase.firestore().collection('messages').add({
@@ -181,20 +197,9 @@ async function sendMessage() {
             });
 
             messageInput.value = '';
-            rateLimiter.recordMessage();
         } catch (error) {
             console.error('Error sending message:', error);
-            // Show error message to user
-            const messagesContainer = document.getElementById('messages');
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'message error';
-            errorMessage.innerHTML = `
-                <div class="message-content">
-                    Error: ${error.message}
-                </div>
-            `;
-            messagesContainer.appendChild(errorMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            displaySystemMessage('Error: ' + error.message);
         }
     }
 }
