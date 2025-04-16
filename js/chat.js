@@ -67,7 +67,7 @@ function displayMessage(message) {
             <span class="timestamp">${timestamp}</span>
             <div class="delete-button-placeholder"></div>
         </div>
-        <div class="message-content" style="colour: ${message.textColour || '#000000'}">${message.text}</div>
+        <div class="message-content" style="color: ${message.textColour || '#000000'}">${message.text}</div>
     `;
 
     // Check if user is DaddyPig and add delete button if true

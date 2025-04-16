@@ -11,7 +11,12 @@ service cloud.firestore {
     match /messages/{messageId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (
+        // Allow users to delete their own messages
+        request.resource.data.userId == request.auth.uid ||
+        // Allow DaddyPig to delete any message
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == 'DaddyPig'
+      );
     }
     
     // Allow authenticated users to read and write the message of the day
