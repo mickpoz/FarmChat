@@ -47,7 +47,7 @@ function displayMessage(message) {
             <strong>${message.username}</strong>
             <span class="timestamp">${timestamp}</span>
         </div>
-        <div class="message-content">${message.text}</div>
+        <div class="message-content" style="color: ${message.textColor || '#000000'}">${message.text}</div>
     `;
 
     messagesContainer.appendChild(messageElement);
@@ -139,6 +139,19 @@ async function sendMessage() {
         return;
     }
 
+    if (message.startsWith('/color ')) {
+        const color = message.substring(7).trim();
+        // Validate color format (hex, rgb, or color name)
+        if (isValidColor(color)) {
+            await updateTextColor(color);
+            messageInput.value = '';
+            return;
+        } else {
+            displaySystemMessage('Invalid color format. Use hex (#RRGGBB), rgb(r,g,b), or a valid color name.');
+            return;
+        }
+    }
+
     if (message) {
         try {
             const user = firebase.auth().currentUser;
@@ -156,11 +169,14 @@ async function sendMessage() {
                 throw new Error('Username not found in profile. Please try logging out and back in.');
             }
 
+            const textColor = userData.textColor || '#000000';
+
             await firebase.firestore().collection('messages').add({
                 text: message,
                 userId: user.uid,
                 username: userData.username,
                 avatarUrl: userData.avatarUrl,
+                textColor: textColor,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -259,4 +275,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     observer.observe(messagesContainer, { childList: true, subtree: true });
-}); 
+});
+
+// Helper function to validate color
+function isValidColor(color) {
+    const s = new Option().style;
+    s.color = color;
+    return s.color !== '';
+}
+
+// Display system message
+function displaySystemMessage(message) {
+    const messagesContainer = document.getElementById('messages');
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message system';
+    messageElement.innerHTML = `<div class="message-content">${message}</div>`;
+    messagesContainer.appendChild(messageElement);
+    
+    if (isNearBottom()) {
+        scrollToBottom();
+    }
+} 

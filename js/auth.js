@@ -30,50 +30,34 @@ async function register() {
     const avatarFile = document.getElementById('avatar').files[0];
 
     try {
-        // Create user account
         const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
         const userId = userCredential.user.uid;
 
-        // Handle avatar if provided
         let avatarUrl = '';
         if (avatarFile) {
-            if (!avatarFile.type.startsWith('image/')) {
-                throw new Error('Please select an image file');
-            }
-            if (avatarFile.size > 1024 * 1024) {
-                throw new Error('Image size should be less than 1MB');
-            }
-            avatarUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(avatarFile);
-            });
+            const storageRef = firebase.storage().ref();
+            const avatarRef = storageRef.child(`avatars/${userId}`);
+            await avatarRef.put(avatarFile);
+            avatarUrl = await avatarRef.getDownloadURL();
         }
 
-        // Create user profile in Firestore
         const userProfile = {
             username: username,
             email: email,
             avatarUrl: avatarUrl,
             status: 'Just joined Farm Chat!',
             spotifyUrl: '',
+            textColor: '#000000',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        // Wait for the profile to be created
         await firebase.firestore().collection('users').doc(userId).set(userProfile);
-
-        // Only show chat and load profile after Firestore document is created
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('chatContainer').style.display = 'grid';
         loadUserProfile(userId);
     } catch (error) {
         console.error('Registration error:', error);
         alert('Registration failed: ' + error.message);
-        // If there's an error, sign out the user since we can't create their profile
-        if (firebase.auth().currentUser) {
-            await firebase.auth().signOut();
-        }
     }
 }
 
@@ -172,18 +156,14 @@ function showUserProfile(userId) {
     });
 }
 
-// Update the loadUserProfile function to add click handlers
+// Update the loadUserProfile function to remove color picker reference
 function loadUserProfile(userId) {
     firebase.firestore().collection('users').doc(userId).onSnapshot((doc) => {
         if (doc.exists) {
             const userData = doc.data();
-            const userNameElement = document.getElementById('userName');
-            userNameElement.textContent = userData.username;
-            userNameElement.setAttribute('data-user-id', userId);
-            userNameElement.onclick = () => showUserProfile(userId);
-            
+            document.getElementById('userName').textContent = userData.username;
             document.getElementById('userStatus').textContent = userData.status;
-            document.getElementById('userSpotify').href = userData.spotifyUrl;
+            document.getElementById('userSpotify').href = userData.spotifyUrl || '#';
             if (userData.avatarUrl) {
                 document.getElementById('userAvatar').src = userData.avatarUrl;
             }
@@ -276,4 +256,16 @@ firebase.auth().onAuthStateChanged((user) => {
         document.getElementById('loginForm').style.display = 'block';
         document.getElementById('registerForm').style.display = 'none';
     }
-}); 
+});
+
+// Update user's text color
+async function updateTextColor(color) {
+    const userId = firebase.auth().currentUser.uid;
+    try {
+        await firebase.firestore().collection('users').doc(userId).update({
+            textColor: color
+        });
+    } catch (error) {
+        console.error('Error updating text color:', error);
+    }
+} 

@@ -407,6 +407,36 @@
         .message-input button:hover {
             background: var(--secondary-color);
         }
+
+        .color-picker-container {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-picker-container label {
+            color: var(--text-color);
+            font-size: 0.9em;
+        }
+
+        .color-picker-container input[type="color"] {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .color-picker-container input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker-container input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
